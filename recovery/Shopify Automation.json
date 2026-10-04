@@ -1,0 +1,551 @@
+{
+  "name": "Shopify Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "790bb82e-49cf-44f9-a308-acb5eb48b115",
+        "options": {}
+      },
+      "id": "c9c6e6a8-5a61-4737-8dcf-76661de0ef00",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -384,
+        -16
+      ],
+      "webhookId": "790bb82e-49cf-44f9-a308-acb5eb48b115"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "78da05bf-7fb4-4d1b-918f-349af4778200",
+              "name": "shopifyCheckoutId",
+              "value": "={{ $json.body.token }}",
+              "type": "string"
+            },
+            {
+              "id": "0393387d-314a-42da-981e-e95552fdca3f",
+              "name": "shopifyCustomerId",
+              "value": "={{ $json.body.customer.id }}",
+              "type": "number"
+            },
+            {
+              "id": "c0fcb2c2-dab7-447c-8c40-fce8cb62df2c",
+              "name": "customerEmail",
+              "value": "={{ $json.body.customer.email }}",
+              "type": "string"
+            },
+            {
+              "id": "33fee13b-bd72-48b2-b913-a53c7d1b1ecd",
+              "name": "customerName",
+              "value": "={{ $json.body.customer.first_name }}{{ $json.body.customer.last_name }}",
+              "type": "string"
+            },
+            {
+              "id": "fad0f505-aad8-4a4d-b2ac-fe202bb8e3d8",
+              "name": "totalAmount",
+              "value": "={{ $json.body.total_price }}",
+              "type": "string"
+            },
+            {
+              "id": "90cb5036-c144-4ab3-90d5-37e7b1c4adb3",
+              "name": "currency",
+              "value": "={{ $json.body.currency }}",
+              "type": "string"
+            },
+            {
+              "id": "e0735afd-65f3-4d48-b671-3482191373dd",
+              "name": "previousPurchaseCount",
+              "value": "={{ $json.body.customer.orders_count }}",
+              "type": "number"
+            },
+            {
+              "id": "945b6789-8514-404b-9a63-56b9cba72273",
+              "name": "previousRecoveryAttempts",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "fa15809b-9815-42ae-8113-172b49dd6c94",
+              "name": "returningCustomer",
+              "value": "={{ $json.body.customer.orders_count > 0 }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "daa2b47b-3cbb-4418-8705-3fb3b455620c",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -48,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://shortage-unscrew-racoon.ngrok-free.dev/api/recovery/evaluate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "ngrok-skip-browser-warning",
+              "value": "true"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "bf36418b-6ae1-4405-b47e-ca0e018d9f9f",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        240,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dc2a7abb-d47c-4e2e-959c-b96f7263e9a2",
+              "leftValue": "={{ $json.eligible }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1ce44fcf-bbc7-4c22-b353-4fa53aa54c27",
+      "name": "Eligibility Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        464,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "openai/gpt-oss-120b",
+          "mode": "list",
+          "cachedResultName": "OPENAI/GPT-OSS-120B"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are an e-commerce recovery assistant. Write a short, professional, and personalized abandoned cart email.\nDo not offer any false discounts. Keep it natural and concise.\n\nCustomer Name: {{ $('Edit Fields').item.json.customerName }}\nCheckout Amount: {{ $('Edit Fields').item.json.currency }} {{$('Edit Fields').item.json.totalAmount }}\nCustomer Segment: {{ $('HTTP Request').item.json.segment }}\nPriority: {{ $('HTTP Request').item.json.priority }}\nReason: {{ $('HTTP Request').item.json.reason }}\n\nGenerate the output strictly as a JSON object with two keys: \"subject\" and \"body\". Do not include markdown formatting like ```json."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "store": "={{ false }}"
+        }
+      },
+      "id": "a61df96c-0d3f-4c45-b5d9-00f28b48cc87",
+      "name": "Message a model",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        688,
+        -144
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "epBiqUtgK3Kd94Nd",
+          "name": "OpenAI account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Edit Fields').item.json.customerEmail }}",
+        "subject": "={{ JSON.parse($json.output[0].content[0].text).subject }}",
+        "emailType": "text",
+        "message": "={{ JSON.parse($json.output[0].content[0].text).body }}",
+        "options": {}
+      },
+      "id": "3a369209-9acc-4734-b34c-09f04710cf22",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        -144
+      ],
+      "webhookId": "d309769a-9ee6-414f-a4ae-f6dd30915fc4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "71PaH8RhrdO8Mz0r",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://shortage-unscrew-racoon.ngrok-free.dev/api/recovery/attempt",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"checkoutId\": 1,\n  \"attemptNumber\": 1,\n  \"channel\": \"EMAIL\",\n  \"message\": {{ JSON.stringify($('Message a model').item.json.output[0].content[0].text) }}\n}",
+        "options": {}
+      },
+      "id": "983bdf22-f7a1-45fe-ac9b-1e6ca88002ec",
+      "name": "HTTP Request1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1280,
+        -144
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "22955385-2a90-4b0e-aeaf-e5b50190832e",
+      "name": "No Operation, do nothing",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        672,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 24,
+        "unit": "hours"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1504,
+        -144
+      ],
+      "id": "f1dd1ff9-5646-4858-8dd6-1daccf656810",
+      "name": "Wait",
+      "webhookId": "4199e652-88f2-410e-8c62-4e7974884997"
+    },
+    {
+      "parameters": {
+        "url": "https://shortage-unscrew-racoon.ngrok-free.dev/api/checkout/1/status",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1728,
+        -144
+      ],
+      "id": "b872d0ea-03ad-4e76-a215-ce6673ab6930",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "openai/gpt-oss-120b",
+          "mode": "list",
+          "cachedResultName": "OPENAI/GPT-OSS-120B"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Write a short, friendly, and urgent 24-hour follow-up email for an abandoned cart. \nThe customer's name is {{$('Edit Fields').item.json.customerName}}. You MUST use this exact name for the greeting (e.g., \"Hi Dhruv,\"). Do NOT use any placeholders like [First Name] or [Your Brand]. \nOffer them a 10% discount code: SAVE10. Keep the tone natural and helpful. \nReturn ONLY the email body."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "store": "={{ false }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2144,
+        -288
+      ],
+      "id": "eecf2217-b7de-4e82-98a8-0671d64365cd",
+      "name": "Message a model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "epBiqUtgK3Kd94Nd",
+          "name": "OpenAI account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.customer.email }}",
+        "subject": "Hey Your Cart Is Waiting",
+        "message": "={{ $json.output[0].content[0].text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2512,
+        -288
+      ],
+      "id": "f24b066f-007f-466c-b08c-fce2afed171a",
+      "name": "Send a message1",
+      "webhookId": "2da75fe3-01a3-4099-87c0-18d3ab2942e7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "71PaH8RhrdO8Mz0r",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://shortage-unscrew-racoon.ngrok-free.dev/api/recovery/attempt",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"checkoutId\": 1,\n  \"attemptNumber\": 2,\n  \"channel\": \"EMAIL\",\n  \"message\": {{ JSON.stringify($('Message a model1').item.json.output[0].content[0].text) }}\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2784,
+        -288
+      ],
+      "id": "17a4504d-1ec4-4f36-815f-6b4d9592c6c4",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "41eb109b-5d93-4360-bcef-a2f44fd52e8e",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "ABANDONED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1952,
+        -144
+      ],
+      "id": "f4eaf573-7b65-4084-b29b-112bb2b4f535",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2192,
+        -16
+      ],
+      "id": "74923c03-aa9f-4c36-8713-11fa12e7cd6a",
+      "name": "No Operation, do nothing1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Eligibility Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eligibility Check": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ac3d2959-84c4-4aec-b3ab-bb665f496841",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9178fa9552e8e3308339a133a579fa4d43bbbf2549b6ef27fbd721fb41d71420"
+  },
+  "nodeGroups": [],
+  "id": "SdUBIpRvQ8Dullry",
+  "tags": []
+}

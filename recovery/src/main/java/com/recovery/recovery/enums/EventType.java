@@ -1,0 +1,15 @@
+package com.recovery.recovery.enums;
+
+public enum EventType {
+    CHECKOUT_RECEIVED,
+    VALIDATION_PASSED,
+    VALIDATION_FAILED,
+    RECOVERY_EVALUATED,
+    MESSAGE_GENERATED,
+    MESSAGE_SENT,
+    MESSAGE_FAILED,
+    PURCHASE_CHECKED,
+    RECOVERED,
+    FOLLOW_UP_SENT,
+    WORKFLOW_STOPPED
+}
